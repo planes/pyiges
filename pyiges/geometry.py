@@ -707,8 +707,8 @@ class Composite_Curve(Entity):
         self.parameters = parameters
         self.N_curves   = int(parameters[1])
         self.curves     = []
-        for ii in range(2,len(parameters[1:])):
-            self.curves.append(parameters[ii])
+        for ii in range(2,self.N_curves+2):
+            self.curves.append(int(parameters[ii]))
             
     def get_curves(self):
         curves = []
