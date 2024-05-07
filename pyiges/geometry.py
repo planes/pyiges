@@ -526,10 +526,10 @@ class RationalBSplineSurface(Entity):
         en = st + 3 * (1 + self._k2) * (1 + self._k1)
         self._cp = parameters[st:en].reshape(-1, 3)
 
-        self._u0 = parameters[-3]  # Start first parameter value
-        self._u1 = parameters[-2]  # End first parameter value
-        self._v0 = parameters[-1]  # Start second parameter value
-        self._v1 = parameters[-0]  # End second parameter value
+        self._u0 = parameters[-4]  # Start first parameter value
+        self._u1 = parameters[-3]  # End first parameter value
+        self._v0 = parameters[-2]  # Start second parameter value
+        self._v1 = parameters[-1]  # End second parameter value
 
     def __repr__(self):
         info = "Rational B-Spline Surface\n"
@@ -689,6 +689,97 @@ class CircularArc(Entity):
         info += "Z Disp: %f" % self.z
         return info
 
+
+class Composite_Curve(Entity):
+    """Groups other curves to form a composite. Can use Ordered List, Point, 
+    Connected Point, and Parameterized Curve entities."""
+    
+    
+    def _add_parameters(self, parameters):
+        """
+                Parameter Data
+        Index	Type	Name	Description
+        1	REAL	N	Number of curves comprising this entity
+        2	Pointer	DE(1)	Pointer to first curve
+        
+        1+N	Pointer	DE(N)	Pointer to last curve
+        """
+        self.parameters = parameters
+        self.N_curves   = int(parameters[1])
+        self.curves     = []
+        for ii in range(2,len(parameters[1:])):
+            self.curves.append(parameters[ii])
+            
+    def get_curves(self):
+        curves = []
+        for curve_ptr in self.curves:
+            curves.append(self.iges.from_pointer(curve_ptr))
+        return curves
+    
+class Curve_On_A_Parametric_Surface(Entity):
+    """Associates a curve and a surface, gives how a curve lies on the specified surface."""
+    
+    def _add_parameters(self, parameters):
+        """
+                Parameter Data
+        Index	Type	Name	Description
+        1	INT	Flag1	Indicates how curve was created:
+                                0 = Unspecified
+                                1 = Projection
+                                2 = Intersection of surfaces
+                                3 = Isoparametric curve
+        2	Pointer	Surface	Points to surface curve lies on
+        3	Pointer	Curve	Definition of curve
+        4	Pointer	Mapping	Entity that provides mapping from curve to surface
+        5	INT	Representation	Preferred representation of curve:
+                                0 = Unspecified
+                                1 = S(B(t))
+                                2 = C(t)
+                                3 = Both equal
+        """
+        self.parameters      = parameters
+        self.how_created     = int(parameters[1])
+        self.surface_pointer = int(parameters[2])
+        self.curve_pointer   = int(parameters[3])
+        self.mapping         = parameters[4]
+        self.representation  = parameters[5]
+        
+    def get_surface(self):
+        return self.iges.from_pointer(self.surface_pointer)
+    
+    def get_curve(self):
+        return self.iges.from_pointer(self.curve_pointer)    
+    
+class Trimmed_Surface(Entity):
+    
+        def _add_parameters(self, parameters):
+            """
+                    Parameter Data
+            Index	Type	Name	Description
+            1	Pointer	Surface	Entity to be trimmed
+            2	INT	Flag	0=Boundary is boundary of surface, 1=otherwise
+            3	INT	N	Number of closed curves that make up inner boundary
+            4	Pointer	OuterBound Pointer to Curve on Parametric Surface
+                                        (Type 142) entity that is outer bound
+            5	Pointer	Inner1	Pointer to first inner curve boundary
+            5+N	Pointer	InnerN	Pointer to last inner curve boundary
+            """
+            self.parameters       = parameters
+            self.surface_pointer  = int(parameters[1])
+            self.flag_boundary    = int(parameters[2])
+            self.n_inner_boundary = int(parameters[3])
+            self.OuterBound       = int(parameters[4])
+            self.inner_curve_boundary = []
+            for ii in range(5,len(parameters[4:])):
+                self.inner_curve_boundary.append(parameters[ii])
+                
+        def get_surface(self):
+            return self.iges.from_pointer(self.surface_pointer)
+        
+        def get_outerboundary(self):
+            return self.iges.from_pointer(self.OuterBound)    
+
+        
 
 class Face(Entity):
     """Defines a bound portion of three dimensional space (R^3) which

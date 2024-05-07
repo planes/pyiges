@@ -182,6 +182,15 @@ class Iges:
         return self._return_type(
             geometry.RationalBSplineSurface, as_vtk, merge, **kwargs
         )
+    
+    def Composite_Curves(self, to_vtk=False, merge=False, **kwargs):
+        return self._return_type(geometry.Composite_Curve, to_vtk, merge, **kwargs)        
+    
+    def Curve_On_A_Parametric_Surfaces(self, to_vtk=False, merge=False, **kwargs):
+        return self._return_type(geometry.Curve_On_A_Parametric_Surface, to_vtk, merge, **kwargs)    
+    
+    def Trimmed_Surfaces(self, to_vtk=False, merge=False, **kwargs):
+        return self._return_type(geometry.Trimmed_Surface, to_vtk, merge, **kwargs)
 
     def circular_arcs(self, to_vtk=False, merge=False, **kwargs):
         """All circular_arcs"""
@@ -291,7 +300,7 @@ class Iges:
                         if entity_type_number == 100:  # Circular arc
                             e = geometry.CircularArc(self)
                         elif entity_type_number == 102:  # Composite curve
-                            e = Entity(self)
+                            e = geometry.Composite_Curve(self)
                         elif entity_type_number == 104:  # Conic arc
                             e = geometry.ConicArc(self)
                         elif entity_type_number == 108:  # Plane
@@ -316,6 +325,10 @@ class Iges:
                             e = geometry.RationalBSplineCurve(self)
                         elif entity_type_number == 128:  # Rational B-spline surface
                             e = geometry.RationalBSplineSurface(self)
+                        elif entity_type_number == 142:  # Curve On A Parametric Surface
+                            e = geometry.Curve_On_A_Parametric_Surface(self)
+                        elif entity_type_number == 144:  # Trimmed Surface
+                            e = geometry.Trimmed_Surface(self)                          
 
                         # CSG Entities. See IGES spec v5.3, p. 42, Section 3.3
                         elif entity_type_number == 150:  # Block
