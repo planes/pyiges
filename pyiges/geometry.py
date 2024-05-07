@@ -756,10 +756,10 @@ class Trimmed_Surface(Entity):
             """
                     Parameter Data
             Index	Type	Name	Description
-            1	Pointer	Surface	Entity to be trimmed
-            2	INT	Flag	0=Boundary is boundary of surface, 1=otherwise
-            3	INT	N	Number of closed curves that make up inner boundary
-            4	Pointer	OuterBound Pointer to Curve on Parametric Surface
+            1	        Pointer	Surface	Entity to be trimmed
+            2	        INT	Flag	0=Boundary is boundary of surface, 1=otherwise
+            3	        INT	N	Number of closed curves that make up inner boundary
+            4	        Pointer	OuterBound Pointer to Curve on Parametric Surface
                                         (Type 142) entity that is outer bound
             5	Pointer	Inner1	Pointer to first inner curve boundary
             5+N	Pointer	InnerN	Pointer to last inner curve boundary

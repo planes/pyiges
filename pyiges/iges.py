@@ -240,7 +240,7 @@ class Iges:
 
     def from_pointer(self, ptr):
         """Return an iges object according to an iges pointer"""
-        return self[self._pointers[ptr]]
+        return self.entities[self._pointers[ptr]]
 
     @staticmethod
     def _parse_separators_from_first_global_line(line):
