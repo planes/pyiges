@@ -325,8 +325,12 @@ class Iges:
                             e = geometry.RationalBSplineCurve(self)
                         elif entity_type_number == 128:  # Rational B-spline surface
                             e = geometry.RationalBSplineSurface(self)
+                        elif entity_type_number == 141:  # Boundary
+                            e = geometry.Boundary(self)
                         elif entity_type_number == 142:  # Curve On A Parametric Surface
                             e = geometry.Curve_On_A_Parametric_Surface(self)
+                        elif entity_type_number == 143:  # Bounded Surface
+                            e = geometry.Bounded_Surface(self)
                         elif entity_type_number == 144:  # Trimmed Surface
                             e = geometry.Trimmed_Surface(self)                          
 

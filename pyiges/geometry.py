@@ -526,10 +526,10 @@ class RationalBSplineSurface(Entity):
         en = st + 3 * (1 + self._k2) * (1 + self._k1)
         self._cp = parameters[st:en].reshape(-1, 3)
 
-        self._u0 = parameters[-4]  # Start first parameter value
-        self._u1 = parameters[-3]  # End first parameter value
-        self._v0 = parameters[-2]  # Start second parameter value
-        self._v1 = parameters[-1]  # End second parameter value
+        self._u0 = parameters[en]    # Start first parameter value
+        self._u1 = parameters[en+1]  # End first parameter value
+        self._v0 = parameters[en+2]  # Start second parameter value
+        self._v1 = parameters[en+3]  # End second parameter value
 
     def __repr__(self):
         info = "Rational B-Spline Surface\n"
@@ -777,7 +777,118 @@ class Trimmed_Surface(Entity):
             return self.iges.from_pointer(self.surface_pointer)
         
         def get_outerboundary(self):
-            return self.iges.from_pointer(self.OuterBound)    
+            return self.iges.from_pointer(self.OuterBound)   
+        
+        
+class Boundary:
+    """Identifies a surface boundary consisting of curves lying on a surface."""
+
+    def _add_parameters(self, parameters):
+        """
+        Parameter Data
+        Index	Type	Name	Description
+        1	INT	Type	The type of boundary being represented
+                                0=Entities reference model space curves
+                                1=Entities reference model space curves and
+                                associated parameter space curves
+        2	INT	Pref	Preferred representation of trimming curves.
+                                0 = Unspecified
+                                1 = Model Space
+                                2 = Parameter Space
+                                3 = Equal
+        3	Pointer	Surface	The untrimmed surface to be bounded
+        4	INT	N	Number of curves in boundary
+        5	Pointer	MC1	Pointer to first model space curve
+        6	INT	Flag 1	Orientation flag: 0 = No reversal
+                                1 = Reversal needed
+        7	INT	K1	How many parameter curves for this model curve
+        8	Pointer	PC(1,1)	First parameter curve for model curve 1
+        7+K1	Pointer	PC(1,K1)	Last parameter curve for model curve 1
+        8+K1	Pointer	MC2	Model curve 2
+        11+3N+Sum(K(N))	Pointer	PC(N,KN)	Last parameter curve for model curve N
+
+        """
+
+        self.parameters = parameters
+        self.Type            = int(parameters[1])
+        self.pref            = int(parameters[2])
+        self.surface_pointer = int(parameters[3])
+        self.N               = int(parameters[4])
+        self.space_curves    = []
+        self.model_curves    = []
+        self.Flags           = []
+        index =  5
+        for _ in range(self.N):
+            space_curve, flag_1, list_curves,index  = unpack_boundary_curves_parameters(parameters, index)
+            self.space_curves.append(space_curve)
+            self.Flags.append(flag_1)
+            self.model_curves.append(list_curves)
+            
+            
+    def get_space_curves(self):
+        scs = []
+        for sc in self.space_curves:
+            scs.append(self.iges.from_pointer(sc))
+        return sc
+    def get_surface(self):
+        return self.iges.from_pointer(self.surface_pointer)
+    def get_model_curves(self):
+        mcs = []
+        for mc in self.model_curves:
+            mcs.append(self.iges.from_pointer(mc))
+        return mc
+        
+        
+
+        
+def unpack_boundary_curves_parameters(parameters,start_index):
+    
+    # Get the parameters
+    space_curve = parameters[start_index]
+    flag_1      = parameters[start_index+1]
+    K1          = parameters[start_index+2]
+    end_index   = start_index + 3 + K1 
+    list_curves = parameters[(start_index+3):end_index]
+    
+    return space_curve, flag_1, list_curves, end_index +1
+            
+
+        
+class Bounded_Surface:
+    """Represents a surface bounded by Boundary Entities."""
+
+    def _add_parameters(self, parameters):    
+        """
+        Parameter Data
+        Index	Type	Name	Description     
+        1	INT	Type	The type of boundary being represented
+                                0=Entities reference model space curves
+                                1=Entities reference model space curves and
+                                associated parameter space curves
+        2	Pointer	Surface	Points to unbounded surface
+        3	INT	N	Number of Boundary entities
+        4	Pointer	B1	Pointer to first boundary entity
+        3+N	Pointer	BN	Pointer to last boundary entity   
+        """
+        self.parameters      = parameters
+        self.Type            = int(parameters[1])
+        self.surface_pointer = int(parameters[2])
+        self.N_boundaries    = int(parameters[3])
+        self.B               = []  # List of boundaries
+        for ii in range(4,4+self.N_boundaries):
+            self.B.append(int(parameters[ii]))
+            
+    def get_surface(self):
+        return self.iges.from_pointer(self.surface_pointer)
+    
+    def get_boundaries(self):
+        Bs = []
+        for B in self.B:
+            Bs.append(self.iges.from_pointer(B))
+        return Bs
+            
+        
+    
 
         
 
