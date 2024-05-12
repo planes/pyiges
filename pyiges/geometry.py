@@ -322,6 +322,7 @@ class RationalBSplineCurve(Entity):
         from geomdl import NURBS
 
         curve = NURBS.Curve()
+        curve._kv_normalize = False
         curve.degree = self.M
         curve.ctrlpts = self.control_points
         curve.weights = self.W + [1]
@@ -580,6 +581,7 @@ class RationalBSplineSurface(Entity):
         from geomdl import BSpline
 
         surf = BSpline.Surface()
+        surf._kv_normalize = False
 
         # Set degrees
         surf.degree_u = self._m2
