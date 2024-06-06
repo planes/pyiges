@@ -580,8 +580,7 @@ class RationalBSplineSurface(Entity):
         """Return a ``geommdl.BSpline.Surface``"""
         from geomdl import BSpline
 
-        surf = BSpline.Surface()
-        surf._kv_normalize = False
+        surf = BSpline.Surface(normalize_kv=False)
 
         # Set degrees
         surf.degree_u = self._m2
