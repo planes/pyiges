@@ -3,8 +3,9 @@ from tqdm import tqdm
 from pyiges import geometry
 from pyiges.check_imports import assert_full_module_variant, pyvista, vtkAppendPolyData
 from pyiges.entity import Entity
+import numpy as np
 
-
+from pyiges import geometry as g
 class Iges:
     """pyiges.Iges object
 
@@ -204,6 +205,9 @@ class Iges:
 
     def loops(self, as_vtk=False, merge=False, **kwargs):
         return self._return_type(geometry.Loop, as_vtk, merge, **kwargs)
+    
+    def Subfigures(self, as_vtk=False, merge=False, **kwargs):
+        return self._return_type(geometry.Subfigure, as_vtk, merge, **kwargs)
 
     def _return_type(self, iges_type, to_vtk=False, merge=False, **kwargs):
         """Return an iges type"""
@@ -349,6 +353,11 @@ class Iges:
                         # Structural entities.  See IGES spec v5.3, p. 50, Section 3.6
                         elif entity_type_number == 132:
                             e = Entity(self)
+                            
+                        elif entity_type_number == 308:
+                            e = geometry.Subfigure(self)      
+                        elif entity_type_number == 314:
+                            e = geometry.Color(self)                            
                         elif entity_type_number == 502:
                             e = geometry.VertexList(self)
                         elif entity_type_number == 504:
@@ -422,6 +431,7 @@ class Iges:
         self._entities = entity_list
         self.desc = desc
         self._pointers = pointer_dict
+        self.sequence_numbers =  np.array([ent.sequence_number for ent in self._entities])
 
     def __getitem__(self, index):
         """Get an item by its pointer"""
@@ -442,6 +452,106 @@ class Iges:
         0.0, 0.0, 0.0
         """
         return self._entities
+        
+    def get_index_from_pointer(self,pointer):
+        self._pointers = None # This cleanses the current pointer list - EMB
+        seq_num = self.sequence_numbers
+        
+        index = int(np.where(seq_num==pointer)[0][0])
+        
+        return index
+    
+    def get_entity_from_pointer(self,pointer):
+        index = self.get_index_from_pointer(pointer)
+        
+        return self._entities[index]
+    
+    def remove_entity_from_pointer(self,pointer):
+        
+        # Get the entity and see what it is
+        try:
+            e = self.get_entity_from_pointer(pointer)
+        except:
+            return
+        
+        # Go through a big list of if statements
+        #
+        #delete the ones that are base level immediately
+        if isinstance(e,(g.Point,g.Line,g.Transformation,g.ConicArc,g.RationalBSplineCurve,g.RationalBSplineSurface,\
+                         g.Color,g.Property_Entity)):
+            pass # This will be deleted at the end
+            
+        elif isinstance(e,g.CircularArc):
+            raise('NOT IMPLEMENTED')
+        elif isinstance(e,g.Composite_Curve):
+            
+            # Get the original pointers
+            curve_pointers = e.curves
+            
+            # Remove all
+            for CP in curve_pointers:
+                self.remove_entity_from_pointer(int(CP))                
+       
+        elif isinstance(e,g.Curve_On_A_Parametric_Surface):
+            
+            # Get the original pointers
+            surface_pointer = e.surface_pointer
+            curve_pointer   = e.curve_pointer
+            mapping         = e.mapping
+            
+            # Remove all three
+            self.remove_entity_from_pointer(surface_pointer)
+            self.remove_entity_from_pointer(curve_pointer)
+            self.remove_entity_from_pointer(mapping)
+
+        elif isinstance(e,g.Trimmed_Surface):
+            
+            # Get the original pointers
+            surface_pointer = int(e.surface_pointer)
+            outerbound      = int(e.OuterBound)
+            innerbounds     = e.inner_curve_boundary # This is a list of strings
+            
+            # Remove all three
+            self.remove_entity_from_pointer(surface_pointer)
+            self.remove_entity_from_pointer(outerbound)
+            for IB in innerbounds:
+                self.remove_entity_from_pointer(int(IB))          
+            
+        elif isinstance(e,g.Boundary):
+            raise('NOT IMPLEMENTED')      
+        elif isinstance(e,g.Bounded_Surface):
+            raise('NOT IMPLEMENTED')      
+        
+        elif isinstance(e,g.Subfigure):
+            # Iterate over the sub pointers
+            SPs = e.Pointers
+            for SP in SPs:
+                self.remove_entity_from_pointer(int(SP))
+                
+        elif isinstance(e,g.Face):
+            raise('NOT IMPLEMENTED')          
+        elif isinstance(e,g.Loop):
+            raise('NOT IMPLEMENTED')
+        elif isinstance(e,g.EdgeList):
+            raise('NOT IMPLEMENTED')            
+        elif isinstance(e,g.VertexList):
+            raise('NOT IMPLEMENTED')                    
+       
+        # Now remove the pointer
+        self._remove_entity_from_pointer(pointer)         
+
+    
+    
+    def _remove_entity_from_pointer(self,pointer): # This actually deletes an entity
+        
+        index = self.get_index_from_pointer(pointer)
+        
+        # First pop out the entity and then remove the sequence number
+        del self._entities[index]
+        
+        self.sequence_numbers = np.delete(self.sequence_numbers,index)
+        
+        
 
 
 def read(filename):

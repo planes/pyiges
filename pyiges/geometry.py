@@ -70,6 +70,7 @@ class Line(Entity):
     """IGES Straight line segment"""
 
     def _add_parameters(self, parameters):
+        self.parameters = parameters
         self._x1 = parse_float(parameters[1])
         self._y1 = parse_float(parameters[2])
         self._z1 = parse_float(parameters[3])
@@ -131,6 +132,7 @@ class Transformation(Entity):
         12	REAL	T3	Third T vector value
 
         """
+        self.parameters = parameters
         self.r11 = parse_float(parameters[1])
         self.r12 = parse_float(parameters[2])
         self.r13 = parse_float(parameters[3])
@@ -254,6 +256,10 @@ class ConicArc(Entity):
         # x1 = -(b*y + d + sqrt(-4*a*c*y**2 - 4*a*e*y - 4*a*f + b**2*y**2 + 2*b*d*y + d**2))/(2*a)
 
         raise NotImplementedError("Not yet implemented")
+    
+
+        
+    
 
 
 class RationalBSplineCurve(Entity):
@@ -263,6 +269,7 @@ class RationalBSplineCurve(Entity):
     """
 
     def _add_parameters(self, parameters):
+        self.parameters = parameters
         self.K = int(parameters[1])
         self.M = int(parameters[2])
         self.prop1 = int(parameters[3])
@@ -490,6 +497,7 @@ class RationalBSplineSurface(Entity):
             [parse_float(param) for param in input_parameters], dtype=float
         )
 
+        self.parameters = input_parameters
         self._k1 = int(parameters[1])  # Upper index of first sum
         self._k2 = int(parameters[2])  # Upper index of second sum
         self._m1 = int(parameters[3])  # Degree of first basis functions
@@ -647,6 +655,7 @@ class CircularArc(Entity):
         # 5                REAL            Y1      y coordinate of start
         # 6                REAL            X2      x coordinate of end
         # 7                REAL            Y2      y coordinate of end
+        self.parameters = parameters
         self.z = parse_float(parameters[1])
         self.x = parse_float(parameters[2])
         self.y = parse_float(parameters[3])
@@ -889,7 +898,79 @@ class Bounded_Surface:
         return Bs
             
         
+class Subfigure(Entity):
     
+    def _add_parameters(self,parameters):    
+        """
+                Parameter Data
+        Index	Type	Name	Description
+        1	INT	Depth	Depth of subfigure (with nesting)
+        2	String	Name	Subfigure Name
+        3	INT	N	Number of entities in subfigure
+        4	Pointer	E1	Associated entity 1
+        .	.
+        .	.
+        3+N	Pointer	EN	Last associated entity
+        """
+        self.parameters          = parameters
+        self.Depth_of_subfigure  = int(parameters[1])
+        self.Subfigure_Name      = str(parameters[2])
+        self.Number_of_entities  = int(parameters[3])
+        self.Pointers            = parameters[4:4+self.Number_of_entities]
+            
+    def get_pointers(self):
+        return self.iges.from_pointer(self.Pointers)
+
+class Color(Entity):
+    """
+            Parameter Data
+    Index	Type	Name	Description
+        1	REAL	RED	Red value, from 0.0 - 100.0
+        2	REAL	GREEN	Green value, from 0.0 - 100.0
+        3	REAL	BLUE	Blue value, from 0.0 - 100.0
+        4	String	Name	Optional color name
+    """    
+
+    def _add_parameters(self, parameters):
+        self.parameters = parameters
+        self.RED   = float(parameters[1])
+        self.GREEN = float(parameters[2])
+        self.BLUE  = float(parameters[3])
+        
+        
+class Property_Entity(Entity):
+    """
+            Parameter Data
+    Index	Type	Name	Description    
+        1	Integer	NP	Number of property values
+        2	VariableV(1)	First property value
+        .	.
+        1+NP	VariableV(NP)	Last property value
+    """
+    
+    def _add_parameters(self,parameters):
+        self.parameters
+        
+        
+    
+    
+        
+#class Definition_Levels(Entity):
+    #
+            #Parameter Data
+    #Index	Type	Name	Description
+        #1	Integer	NP	Number of property values
+        #2	Integer	L(1)	First level number
+        #.	.
+        #1+NP	Integer	L(NP)	Last level number
+    #"""    
+
+    #def _add_parameters(self, parameters):
+        #self.parameters = parameters
+        #self.NP         = int(parameters[1])
+        #self.L          = parameters[2:]
+
+
 
         
 
