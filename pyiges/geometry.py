@@ -22,6 +22,7 @@ class Point(Entity):
     """IGES Point"""
 
     def _add_parameters(self, parameters):
+        self.parameter_pointers = [False]*len(parameters)
         self._x = parse_float(parameters[1])
         self._y = parse_float(parameters[2])
         self._z = parse_float(parameters[3])
@@ -71,6 +72,7 @@ class Line(Entity):
 
     def _add_parameters(self, parameters):
         self.parameters = parameters
+        self.parameter_pointers = [False]*len(parameters)
         self._x1 = parse_float(parameters[1])
         self._y1 = parse_float(parameters[2])
         self._z1 = parse_float(parameters[3])
@@ -133,6 +135,7 @@ class Transformation(Entity):
 
         """
         self.parameters = parameters
+        self.parameter_pointers = [False]*len(parameters)
         self.r11 = parse_float(parameters[1])
         self.r12 = parse_float(parameters[2])
         self.r13 = parse_float(parameters[3])
@@ -212,6 +215,8 @@ class ConicArc(Entity):
         11	REAL	Y2	y coordinate of end point
         12	REAL	Z2	z coordinate of end point
         """
+        self.parameters = parameters
+        self.parameter_pointers = [False]*len(parameters)
         self.a = parameters[1]  #  coefficient of xt^2
         self.b = parameters[2]  #  coefficient of xtyt
         self.c = parameters[3]  #  coefficient of yt^2
@@ -258,7 +263,51 @@ class ConicArc(Entity):
         raise NotImplementedError("Not yet implemented")
     
 
-        
+class Parametric_Spline_Curve(Entity):
+    """"""
+
+    def _add_parameters(self, parameters):
+        self.parameters= parameters
+        self.parameter_pointers = [False]*len(parameters)
+    
+    
+class Surface_of_Revolution(Entity):
+    """
+            Parameter Data
+    Index	Type	Name	Description
+        1	Pointer	Axis	Pointer to Line describing axis of rotation
+        2	Pointer	Surface	Pointer to generatrix entity
+        3	REAL	SA	Start angle (Rad)
+        4	REAL	EA	End angle (Rad)
+
+    """      
+
+    def _add_parameters(self, parameters):
+        self.parameters = parameters
+        self.parameter_pointers = [False,True,True,False,False]
+        self.axis    = int(parameters[1])
+        self.surface = int(parameters[2])
+        self.SA      = float(parameters[3])
+        self.EA      = float(parameters[4])
+    
+class Tabulated_Cylinder(Entity):
+    
+    def _add_parameters(self, parameters):
+        """
+                Parameter Data
+        Index	Type	Name	Description
+        1	Pointer	Curve	Pointer to directrix
+        2	REAL	Lx	x coordinate of line end
+        3	REAL	Ly	y coordinate of line end
+        4	REAL	Lz	z coordinate of line end
+
+        """        
+        self.parameters = parameters
+        self.parameter_pointers = [False,True,False,False,False]    
+        self.curve = int(parameters[1])
+        self.Lx    = float(parameters[2])
+        self.Ly    = float(parameters[3])
+        self.Lz    = float(parameters[4])
     
 
 
@@ -270,6 +319,7 @@ class RationalBSplineCurve(Entity):
 
     def _add_parameters(self, parameters):
         self.parameters = parameters
+        self.parameter_pointers = [False]*len(parameters)
         self.K = int(parameters[1])
         self.M = int(parameters[2])
         self.prop1 = int(parameters[3])
@@ -498,6 +548,7 @@ class RationalBSplineSurface(Entity):
         )
 
         self.parameters = input_parameters
+        self.parameter_pointers = [False]*len(parameters)
         self._k1 = int(parameters[1])  # Upper index of first sum
         self._k2 = int(parameters[2])  # Upper index of second sum
         self._m1 = int(parameters[3])  # Degree of first basis functions
@@ -656,6 +707,7 @@ class CircularArc(Entity):
         # 6                REAL            X2      x coordinate of end
         # 7                REAL            Y2      y coordinate of end
         self.parameters = parameters
+        self.parameter_pointers = [False]*len(parameters)
         self.z = parse_float(parameters[1])
         self.x = parse_float(parameters[2])
         self.y = parse_float(parameters[3])
@@ -714,11 +766,13 @@ class Composite_Curve(Entity):
         
         1+N	Pointer	DE(N)	Pointer to last curve
         """
-        self.parameters = parameters
-        self.N_curves   = int(parameters[1])
-        self.curves     = []
-        for ii in range(2,self.N_curves+2):
-            self.curves.append(int(parameters[ii]))
+        self.parameters     = parameters
+        self.parameter_pointers = [False,False]
+        self.N_curves       = int(parameters[1])
+        self.curves         = []
+        for ii in range(self.N_curves):
+            self.curves.append(int(parameters[ii+2]))
+            self.parameter_pointers.append(True)
             
     def get_curves(self):
         curves = []
@@ -747,12 +801,14 @@ class Curve_On_A_Parametric_Surface(Entity):
                                 2 = C(t)
                                 3 = Both equal
         """
-        self.parameters      = parameters
-        self.how_created     = int(parameters[1])
-        self.surface_pointer = int(parameters[2])
-        self.curve_pointer   = int(parameters[3])
-        self.mapping         = parameters[4]
-        self.representation  = parameters[5]
+        self.parameters       = parameters
+        self.parameter_pointers = [False,False,True,True,True,False]
+        self.parameter_pointers.extend([False]*(len(parameters)-len(self.parameter_pointers)))
+        self.how_created      = int(parameters[1])
+        self.surface_pointer  = int(parameters[2])
+        self.curve_pointer    = int(parameters[3])
+        self.mapping          = int(parameters[4])
+        self.representation   = parameters[5]
         
     def get_surface(self):
         return self.iges.from_pointer(self.surface_pointer)
@@ -774,14 +830,18 @@ class Trimmed_Surface(Entity):
             5	Pointer	Inner1	Pointer to first inner curve boundary
             5+N	Pointer	InnerN	Pointer to last inner curve boundary
             """
-            self.parameters       = parameters
-            self.surface_pointer  = int(parameters[1])
-            self.flag_boundary    = int(parameters[2])
-            self.n_inner_boundary = int(parameters[3])
-            self.OuterBound       = int(parameters[4])
+            self.parameters         = parameters
+            self.parameter_pointers = [False,True,False,False,True]
+            self.surface_pointer    = int(parameters[1])
+            self.flag_boundary      = int(parameters[2])
+            self.n_inner_boundary   = int(parameters[3])
+            self.OuterBound         = int(parameters[4])
             self.inner_curve_boundary = []
-            for ii in range(5,len(parameters[4:])):
-                self.inner_curve_boundary.append(parameters[ii])
+            for ii in range(self.n_inner_boundary):
+                self.inner_curve_boundary.append(parameters[5+ii])
+                self.parameter_pointers.append(True)
+            self.parameter_pointers.extend([False]*(len(parameters)-len(self.parameter_pointers)))
+                
                 
         def get_surface(self):
             return self.iges.from_pointer(self.surface_pointer)
@@ -881,12 +941,14 @@ class Bounded_Surface:
         3+N	Pointer	BN	Pointer to last boundary entity   
         """
         self.parameters      = parameters
+        self.parameter_pointers  = [False,False,True,False]
         self.Type            = int(parameters[1])
         self.surface_pointer = int(parameters[2])
         self.N_boundaries    = int(parameters[3])
         self.B               = []  # List of boundaries
         for ii in range(4,4+self.N_boundaries):
             self.B.append(int(parameters[ii]))
+            self.parameter_pointers[True]
             
     def get_surface(self):
         return self.iges.from_pointer(self.surface_pointer)
@@ -913,13 +975,17 @@ class Subfigure(Entity):
         3+N	Pointer	EN	Last associated entity
         """
         self.parameters          = parameters
+        self.parameter_pointers  = [False,False,False,False]
         self.Depth_of_subfigure  = int(parameters[1])
         self.Subfigure_Name      = str(parameters[2])
         self.Number_of_entities  = int(parameters[3])
-        self.Pointers            = parameters[4:4+self.Number_of_entities]
+        self.pointers            = [int(x) for x in parameters[4:4+self.Number_of_entities]]
+        self.parameter_pointers.extend([True]*self.Number_of_entities)
+        self.parameter_pointers.extend([False]*(len(parameters)-len(self.parameter_pointers)))
+        
             
     def get_pointers(self):
-        return self.iges.from_pointer(self.Pointers)
+        return self.iges.from_pointer(self.pointers)
 
 class Color(Entity):
     """
@@ -933,6 +999,7 @@ class Color(Entity):
 
     def _add_parameters(self, parameters):
         self.parameters = parameters
+        self.parameter_pointers = [False]*len(parameters)
         self.RED   = float(parameters[1])
         self.GREEN = float(parameters[2])
         self.BLUE  = float(parameters[3])
@@ -950,7 +1017,29 @@ class Property_Entity(Entity):
     
     def _add_parameters(self,parameters):
         self.parameters
+        self.parameter_pointers = [False]*len(parameters)
         
+class Singular_Subgfigure_Instance(Entity):
+    """
+                Parameter Data
+    Index	Type	Name	Description
+        1	Pointer	DE	Pointer to the DE of the Subfigure Definition Entity
+        2	REAL	X	Translation data relative to either model space or to the definition space of a referring entity
+        3	REAL	Y
+        4	REAL	Z
+        5	REAL	S	Scale factor (default = 1.0)
+
+    """
+    def _add_parameters(self,parameters):
+        self.parameters = parameters
+        self.parameter_pointers = [False,True,False,False,False,False]
+        self.pointer  = int(parameters[1])
+        self.X = float(parameters[2])
+        self.Y = float(parameters[3])      
+        self.Z = float(parameters[4])            
+        self.S = float(parameters[5])     
+        self.parameter_pointers.extend([False]*(len(parameters)-len(self.parameter_pointers)))
+ 
         
     
     
@@ -1155,6 +1244,7 @@ class VertexList(Entity):
         3N+1	REAL	ZN
         """
         self.parameters = parameters
+        self.parameter_pointers = [False]*len(parameters)
         self.n_points = int(parameters[1])
         self.points = []
         for i in range(self.n_points):

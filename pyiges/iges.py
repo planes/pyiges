@@ -208,6 +208,9 @@ class Iges:
     
     def Subfigures(self, as_vtk=False, merge=False, **kwargs):
         return self._return_type(geometry.Subfigure, as_vtk, merge, **kwargs)
+    
+    def Singular_Subfigure_Instances(self, as_vtk=False, merge=False, **kwargs):
+        return self._return_type(geometry.Singular_Subgfigure_Instance, as_vtk, merge, **kwargs)
 
     def _return_type(self, iges_type, to_vtk=False, merge=False, **kwargs):
         """Return an iges type"""
@@ -312,7 +315,7 @@ class Iges:
                         elif entity_type_number == 110:  # Line
                             e = geometry.Line(self)
                         elif entity_type_number == 112:  # Parametric spline curve
-                            e = Entity(self)
+                            e = geometry.Parametric_Spline_Curve(self)
                         elif entity_type_number == 114:  # Parametric spline surface
                             e = Entity(self)
                         elif entity_type_number == 116:  # Point
@@ -320,9 +323,9 @@ class Iges:
                         elif entity_type_number == 118:  # Ruled surface
                             e = Entity(self)
                         elif entity_type_number == 120:  # Surface of revolution
-                            e = Entity(self)
+                            e = geometry.Surface_of_Revolution(self)
                         elif entity_type_number == 122:  # Tabulated cylinder
-                            e = Entity(self)
+                            e = geometry.Tabulated_Cylinder(self)
                         elif entity_type_number == 124:  # Transformation matrix
                             e = geometry.Transformation(self)
                         elif entity_type_number == 126:  # Rational B-spline curve
@@ -357,7 +360,9 @@ class Iges:
                         elif entity_type_number == 308:
                             e = geometry.Subfigure(self)      
                         elif entity_type_number == 314:
-                            e = geometry.Color(self)                            
+                            e = geometry.Color(self)          
+                        elif entity_type_number==408:
+                            e = geometry.Singular_Subgfigure_Instance(self)
                         elif entity_type_number == 502:
                             e = geometry.VertexList(self)
                         elif entity_type_number == 504:
@@ -474,15 +479,29 @@ class Iges:
         except:
             return
         
+        if e.sequence_number==51405:
+            print('NOOOOOOO')
+        
         # Go through a big list of if statements
         #
         #delete the ones that are base level immediately
         if isinstance(e,(g.Point,g.Line,g.Transformation,g.ConicArc,g.RationalBSplineCurve,g.RationalBSplineSurface,\
-                         g.Color,g.Property_Entity)):
+                         g.Color,g.Property_Entity,g.Parametric_Spline_Curve)):
             pass # This will be deleted at the end
             
         elif isinstance(e,g.CircularArc):
             raise('NOT IMPLEMENTED')
+        
+        elif isinstance(e,g.Tabulated_Cylinder):
+            curve_pointer = e.curve
+            self.remove_entity_from_pointer(int(curve_pointer))      
+            
+        elif isinstance(e,g.Surface_of_Revolution):
+
+            self.remove_entity_from_pointer(int(e.axis))  
+            self.remove_entity_from_pointer(int(e.surface))  
+            
+            
         elif isinstance(e,g.Composite_Curve):
             
             # Get the original pointers
@@ -500,9 +519,9 @@ class Iges:
             mapping         = e.mapping
             
             # Remove all three
-            self.remove_entity_from_pointer(surface_pointer)
-            self.remove_entity_from_pointer(curve_pointer)
             self.remove_entity_from_pointer(mapping)
+            self.remove_entity_from_pointer(curve_pointer) 
+            self.remove_entity_from_pointer(surface_pointer)
 
         elif isinstance(e,g.Trimmed_Surface):
             
@@ -512,10 +531,10 @@ class Iges:
             innerbounds     = e.inner_curve_boundary # This is a list of strings
             
             # Remove all three
-            self.remove_entity_from_pointer(surface_pointer)
             self.remove_entity_from_pointer(outerbound)
+            self.remove_entity_from_pointer(surface_pointer)
             for IB in innerbounds:
-                self.remove_entity_from_pointer(int(IB))          
+                self.remove_entity_from_pointer(int(IB))      
             
         elif isinstance(e,g.Boundary):
             raise('NOT IMPLEMENTED')      
@@ -524,9 +543,12 @@ class Iges:
         
         elif isinstance(e,g.Subfigure):
             # Iterate over the sub pointers
-            SPs = e.Pointers
+            SPs = e.pointers
             for SP in SPs:
                 self.remove_entity_from_pointer(int(SP))
+                
+        elif isinstance(e,g.Singular_Subgfigure_Instance):
+            self.remove_entity_from_pointer(int(e.pointer))
                 
         elif isinstance(e,g.Face):
             raise('NOT IMPLEMENTED')          
@@ -535,8 +557,10 @@ class Iges:
         elif isinstance(e,g.EdgeList):
             raise('NOT IMPLEMENTED')            
         elif isinstance(e,g.VertexList):
-            raise('NOT IMPLEMENTED')                    
-       
+            raise('NOT IMPLEMENTED')    
+        elif isinstance(e,g.Entity):
+            raise('NOT IMPLEMENTED')
+        
         # Now remove the pointer
         self._remove_entity_from_pointer(pointer)         
 
@@ -550,6 +574,23 @@ class Iges:
         del self._entities[index]
         
         self.sequence_numbers = np.delete(self.sequence_numbers,index)
+        
+    def get_indices_from_pointer(self,pointers):
+        self._pointers = None # This cleanses the current pointer list - EMB
+        seq_num = self.sequence_numbers
+        
+        pointers2d = np.atleast_2d(pointers).T
+
+        return np.where(seq_num==pointers2d)
+            
+        
+    def get_updated_pointers(self,pointers):
+        
+        indices = self.get_indices_from_pointer(pointers)
+        
+        pointers = (2*indices[1])+1
+        
+        return pointers
         
         
 
