@@ -479,9 +479,6 @@ class Iges:
         except:
             return
         
-        if e.sequence_number==51405:
-            print('NOOOOOOO')
-        
         # Go through a big list of if statements
         #
         #delete the ones that are base level immediately
